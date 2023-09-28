@@ -1,8 +1,12 @@
+const { parseISO, differenceInYears } = require("date-fns");
 const db = require("../models");
 const { v4: uuidv4 } = require('uuid');
 const Loan = db.loans;
 
 const User = db.user;
+
+const getAge = (dob) => differenceInYears(new Date(), new Date(dob));
+
 // Create and Save a new Loan
 exports.create = (req, res) => {
   // Validate request
@@ -23,7 +27,8 @@ exports.create = (req, res) => {
     phoneNumber: req.body.phoneNumber,
     emailId: req.body.emailId,
     idNumber: req.body.idNumber,
-    userName: req.body.userName,
+    firstName: req.body.firstName,
+    creditScore: req.body.creditScore,
     dob: req.body.dob,
     amount: req.body.amount,
     emiPerMonth: req.body.emiPerMonth,
@@ -33,8 +38,17 @@ exports.create = (req, res) => {
     loanNumber: uuidv4(),
   });
 
+  // Auto Approved if user has creditScore 850 and Age less than 28
+  // which indicates, he has more chances to repay the loan.
+  if (parseInt(loan.creditScore) > 850 && getAge(loan.dob) < 28) {
+    loan['isAutoApproved'] = true;
+    loan['status'] = "approved";
+    loan['approvedBy'] = "system";
+    loan['approvalDate'] = new Date();
+  }
+
   if (loan.emailId) {
-    User.findOne({ emailId:loan.emailId })
+    User.findOne({ emailId: loan.emailId })
       .then(data => {
         if (data) {
           data["idNumber"] = data["idNumber"] ? data["idNumber"] : loan["idNumber"];
@@ -42,10 +56,11 @@ exports.create = (req, res) => {
           data["dob"] = data["dob"] ? data["dob"] : loan["dob"];
           data["creditScore"] = data["creditScore"] ? data["creditScore"] : loan["creditScore"];
           data["sourceOfIncome"] = data["sourceOfIncome"] ? data["sourceOfIncome"] : loan["sourceOfIncome"];
+          data["firstName"] = data["firstName"] ? data["firstName"] : loan["firstName"];
 
           User.findByIdAndUpdate(data.id, data, { useFindAndModify: false })
             .then(data => {
-              if(data){
+              if (data) {
                 console.log("Updated user's essential Information");
               }
             })

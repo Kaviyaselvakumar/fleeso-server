@@ -5,6 +5,7 @@ module.exports = mongoose => {
     created: 'created',
   });
   const RepaySchedule = mongoose.Schema({ dueDate: Date, amount: String, status: String });
+  const Chat = mongoose.Schema({ id: String, msg:String, createdOn: Date, user: String, userType: String });
 
   var schema = mongoose.Schema(
     {
@@ -18,15 +19,17 @@ module.exports = mongoose => {
       phoneNumber: String,
       emailId: String,
       idNumber: String,
-      userName: String,
+      firstName: String,
       dob: Date,
       creditScore: String,
       amount: String,
       sourceOfIncome: String,
       repaymentMonths: Number,
       emiPerMonth: String,
+      isAutoApproved: Boolean,
       repaySchedule: [RepaySchedule],
       loanNumber: String,
+      chat: [Chat]
     }
   );
 
