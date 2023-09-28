@@ -13,11 +13,12 @@
     "api",
     "mongodb"
   ],
-  "author": "bezkoder",
+  "author": "fleeso",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "mongoose": "^6.11.1"
+    "mongoose": "^6.11.1",
+    "uuid": "^9.0.1"
   }
 }
