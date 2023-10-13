@@ -29,6 +29,10 @@ module.exports = mongoose => {
       isAutoApproved: Boolean,
       repaySchedule: [RepaySchedule],
       loanNumber: String,
+      gender: String,
+      address: String,
+      monthlyIncome: Number,
+      loanType: String,
       chat: [Chat]
     }
   );

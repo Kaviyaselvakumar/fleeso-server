@@ -1,10 +1,10 @@
 const express = require("express");
 const cors = require("cors");
-
+const multer = require('multer');
 const app = express();
 
 
-app.use(cors({ origin: "*" }));
+app.use(cors());
 
 // parse requests of content-type - application/json
 app.use(express.json({ limit: "50mb" }));
@@ -32,6 +32,24 @@ app.get("/", (req, res) => {
 
 require("./app/routes/loan.routes")(app);
 require("./app/routes/user.routes")(app);
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, __dirname + "/app/public/images");
+  },
+  filename: function (req, file, cb) {
+    cb(null, `${Date.now()}_${file.originalname}`);
+  },
+});
+
+
+const upload = multer({storage})
+
+app.post('/upload', upload.single('file'),(req, res)=>{
+        console.log(req.body)
+        console.log(req.file)
+})
+
 
 // set port, listen for requests
 const PORT = process.env.PORT || 9000;

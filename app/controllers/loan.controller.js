@@ -35,7 +35,11 @@ exports.create = (req, res) => {
     repaymentMonths: req.body.repaymentMonths,
     sourceOfIncome: req.body.sourceOfIncome,
     repaySchedule: req.body.repaySchedule,
-    loanNumber: uuidv4(),
+    gender: req.body.gender,
+    address: req.body.address,
+    monthlyIncome: req.body.monthlyIncome,
+    loanType: req.body.loanType,
+    loanNumber: uuidv4()
   });
 
   // Auto Approved if user has creditScore 850 and Age less than 28
@@ -57,7 +61,10 @@ exports.create = (req, res) => {
           data["creditScore"] = data["creditScore"] ? data["creditScore"] : loan["creditScore"];
           data["sourceOfIncome"] = data["sourceOfIncome"] ? data["sourceOfIncome"] : loan["sourceOfIncome"];
           data["firstName"] = data["firstName"] ? data["firstName"] : loan["firstName"];
-
+          data["gender"] = data["gender"] ? data["gender"] : loan["gender"];
+          data["address"] = data["address"] ? data["address"] : loan["address"];
+          data["monthlyIncome"] = data["monthlyIncome"] ? data["monthlyIncome"] : loan["monthlyIncome"];
+          data["loanType"] = data["loanType"] ? data["loanType"] : loan["loanType"];
           User.findByIdAndUpdate(data.id, data, { useFindAndModify: false })
             .then(data => {
               if (data) {
