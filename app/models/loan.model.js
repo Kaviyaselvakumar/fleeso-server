@@ -3,8 +3,9 @@ module.exports = mongoose => {
     approved: 'approved',
     rejected: 'rejected',
     created: 'created',
+    closed: 'closed',
   });
-  const RepaySchedule = mongoose.Schema({ dueDate: Date, amount: String, status: String });
+  const RepaySchedule = mongoose.Schema({ dueDate: String, paymentDate: String, amount: String, status: String });
   const Chat = mongoose.Schema({ id: String, msg:String, createdOn: Date, user: String, userType: String });
 
   var schema = mongoose.Schema(

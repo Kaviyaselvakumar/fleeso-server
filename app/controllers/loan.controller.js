@@ -1,4 +1,4 @@
-const { parseISO, differenceInYears } = require("date-fns");
+const { parseISO, differenceInYears, format, set, addMonths } = require("date-fns");
 const db = require("../models");
 const { v4: uuidv4 } = require('uuid');
 const Loan = db.loans;
@@ -6,6 +6,18 @@ const Loan = db.loans;
 const User = db.user;
 
 const getAge = (dob) => differenceInYears(new Date(), new Date(dob));
+
+const buildNextPaymentDates = (activeLoan) => {
+  const paymentDateList = [];
+  let { repaymentMonths } = activeLoan;
+  let paymentDate = format(new Date(), "MM/dd/yyyy");
+  for (var i = 0; i < repaymentMonths; i++) {
+    paymentDate = format(set(addMonths(new Date(paymentDate), 1), { date: 5 }), "MM/dd/yyyy");
+    paymentDateList.push({ dueDate: paymentDate, status: "unpaid", amount: activeLoan.emiPerMonth });
+  }
+  return paymentDateList;
+}
+
 
 // Create and Save a new Loan
 exports.create = (req, res) => {
@@ -51,6 +63,10 @@ exports.create = (req, res) => {
     loan['approvalDate'] = new Date();
   }
 
+  // Prefill RepaySchedule in case of auto approved loan
+  if (loan.repaySchedule == null || (loan.repaySchedule != null && loan.repaySchedule.length === 0) && loan.status === 'approved') {
+    loan.repaySchedule = buildNextPaymentDates(loan);
+  }
   if (loan.emailId) {
     User.findOne({ emailId: loan.emailId })
       .then(data => {
@@ -63,7 +79,7 @@ exports.create = (req, res) => {
           data["firstName"] = data["firstName"] ? data["firstName"] : loan["firstName"];
           data["gender"] = data["gender"] ? data["gender"] : loan["gender"];
           data["address"] = data["address"] ? data["address"] : loan["address"];
-          data["monthlyIncome"] = data["monthlyIncome"] ? data["monthlyIncome"] : loan["monthlyIncome"];
+          data["salary"] = data["monthlyIncome"] ? data["monthlyIncome"] : loan["monthlyIncome"];
           data["loanType"] = data["loanType"] ? data["loanType"] : loan["loanType"];
           User.findByIdAndUpdate(data.id, data, { useFindAndModify: false })
             .then(data => {
@@ -190,7 +206,7 @@ exports.deleteAll = (req, res) => {
 // Find all Borrowers Loans
 exports.findAllBorrowers = (req, res) => {
   const emailId = req.query.emailId;
-  Loan.find({ status: ["approved", "rejected"], emailId })
+  Loan.find({ status: ["approved", "rejected", "closed"], emailId })
     .then(data => {
       res.send(data);
     })
@@ -215,3 +231,63 @@ exports.findAllCreatedLoans = (req, res) => {
       });
     });
 };
+
+const isPaymentNeeded = (activeLoan) => {
+  return activeLoan && activeLoan.repaySchedule && activeLoan.repaySchedule.filter(r => r.status === "unpaid").length > 0;
+}
+
+exports.payLoan = async (req, res) => {
+  const loanNumber = req.query.loanNumber;
+  Loan.findOne({ loanNumber })
+    .then(loan => {
+      if (loan != null) {
+        if (!loan.repaySchedule || loan.repaySchedule.length === 0 || isPaymentNeeded(loan)) {
+          let firstUnPaidIndex = loan.repaySchedule.findIndex(x => x.status === "unpaid");
+
+          if (firstUnPaidIndex !== -1) {
+            loan.repaySchedule[firstUnPaidIndex].paymentDate = format(new Date(), "MM/dd/yyyy");
+            loan.repaySchedule[firstUnPaidIndex].status = "paid";
+            loan.repaySchedule[firstUnPaidIndex].amount = parseFloat(loan.emiPerMonth);
+          }
+
+          if (!isPaymentNeeded(loan)) {
+            loan.status = "closed";
+            const convo = {
+              createdOn: new Date(),
+              user: "System",
+              msg: "Congratulations on closing your loan, Thanks for banking with us",
+              userType: "lender"
+            }
+            if (loan.chat) {
+              loan.chat.push(convo);
+            } else {
+              loan.chat = [convo];
+            }
+          }
+          Loan.findByIdAndUpdate(loan._id, loan, { useFindAndModify: false })
+            .then(data => {
+              if (!data) {
+                res.status(404).send({
+                  message: `Cannot update Loan with id=${loan._id}. Maybe Loan was not found!`
+                });
+              } else
+                res.send({ loan, message: "EMI Paid Successfully" });
+            })
+            .catch(err => {
+              res.status(500).send({
+                message: "Error updating Loan with id=" + loan._id
+              });
+            });
+        } else {
+          console.log("Loan Closed");
+          res.send({ loan: null, message: "Loan Closed already" });
+        }
+      }
+    })
+    .catch(err => {
+      res.status(500).send({
+        message:
+          err.message || "Some error occurred while retrieving loans."
+      });
+    });
+}

@@ -24,5 +24,8 @@ module.exports = app => {
   // Delete a Loan with id
   router.delete("/:id", loans.delete);
 
+  // Pay a loan
+  router.post("/pay", loans.payLoan);
+
   app.use("/api/loans", router);
 };
